@@ -8,4 +8,9 @@ export default defineConfig(({ command }) => ({
   // Only applied to production builds so the dev server stays at "/" (matching
   // the Twitch app's registered http://localhost:5173/ redirect URI).
   base: command === 'build' ? '/twitch-clip-viewer/' : '/',
+  build: {
+    // GitHub Pages' "Deploy from a branch" mode only offers "/ (root)" or "/docs" as the
+    // serving folder — "dist" isn't selectable — so build straight into docs/.
+    outDir: 'docs',
+  },
 }))

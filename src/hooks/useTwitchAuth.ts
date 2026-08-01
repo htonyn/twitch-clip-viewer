@@ -1,15 +1,14 @@
 import { useEffect, useState } from 'react';
+import { TWITCH_CLIENT_ID } from '../config';
 import { buildAuthorizeUrl, parseAuthResponse } from '../lib/oauth';
 import { fetchAuthenticatedUser } from '../lib/twitch';
 
-const CLIENT_ID_KEY = 'twitch_client_id';
 const ACCESS_TOKEN_KEY = 'twitch_access_token';
 const STATE_KEY = 'twitch_oauth_state';
 
 export type TwitchAuthStatus = 'signed-out' | 'connecting' | 'signed-in' | 'error';
 
 export function useTwitchAuth() {
-  const [clientId, setClientId] = useState(() => sessionStorage.getItem(CLIENT_ID_KEY) ?? '');
   const [accessToken, setAccessToken] = useState(() => sessionStorage.getItem(ACCESS_TOKEN_KEY));
   const [displayName, setDisplayName] = useState<string | null>(null);
   const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
@@ -46,10 +45,10 @@ export function useTwitchAuth() {
 
   // Confirm the token actually works and fetch a display name for it.
   useEffect(() => {
-    if (!accessToken || !clientId) return;
+    if (!accessToken) return;
     let cancelled = false;
     setVerifying(true);
-    fetchAuthenticatedUser(clientId, accessToken)
+    fetchAuthenticatedUser(TWITCH_CLIENT_ID, accessToken)
       .then((user) => {
         if (cancelled) return;
         setDisplayName(user.display_name);
@@ -69,19 +68,12 @@ export function useTwitchAuth() {
     return () => {
       cancelled = true;
     };
-  }, [accessToken, clientId]);
+  }, [accessToken]);
 
-  function connect(id: string) {
-    const trimmed = id.trim();
-    if (!trimmed) {
-      setError('Enter a Client ID first.');
-      return;
-    }
+  function connect() {
     const state = crypto.randomUUID();
-    sessionStorage.setItem(CLIENT_ID_KEY, trimmed);
     sessionStorage.setItem(STATE_KEY, state);
-    setClientId(trimmed);
-    location.href = buildAuthorizeUrl(trimmed, state);
+    location.href = buildAuthorizeUrl(TWITCH_CLIENT_ID, state);
   }
 
   function disconnect() {
@@ -97,5 +89,5 @@ export function useTwitchAuth() {
   else if (accessToken && displayName) status = 'signed-in';
   else if (accessToken && verifying) status = 'connecting';
 
-  return { status, clientId, accessToken, displayName, profileImageUrl, error, connect, disconnect };
+  return { status, clientId: TWITCH_CLIENT_ID, accessToken, displayName, profileImageUrl, error, connect, disconnect };
 }
