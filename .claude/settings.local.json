@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(node -v)",
+      "PowerShell(npm -v)",
+      "PowerShell(Get-Command node -ErrorAction SilentlyContinue; Get-Command npm -ErrorAction SilentlyContinue; where.exe node 2>$null; Test-Path \"$env:ProgramFiles\\\\nodejs\\\\node.exe\"; Test-Path \"$env:APPDATA\\\\nvm\"; Get-ChildItem \"$env:LOCALAPPDATA\\\\Programs\" -ErrorAction SilentlyContinue | Select-Object Name)",
+      "PowerShell($paths = @\\(\"$env:LOCALAPPDATA\\\\fnm\", \"$env:LOCALAPPDATA\\\\Volta\", \"$env:ProgramFiles\\\\nodejs\", \"$env:USERPROFILE\\\\.volta\", \"$env:USERPROFILE\\\\scoop\\\\apps\\\\nodejs\", \"$env:ProgramData\\\\chocolatey\\\\lib\\\\nodejs\"\\); foreach\\($p in $paths\\){ \"$p : $\\(Test-Path $p\\)\" }; winget list --id OpenJS.NodeJS 2>$null | Select-String -Pattern \"Node\")",
+      "PowerShell(npm.cmd -v)",
+      "PowerShell(npx create-vite@latest __scaffold_tmp__ --template react-ts)",
+      "PowerShell(npm.cmd install)",
+      "PowerShell(npm.cmd run build)",
+      "PowerShell(npm.cmd run dev)",
+      "PowerShell(Get-Command chromium-cli -ErrorAction SilentlyContinue)",
+      "PowerShell(Test-Path \"$env:USERPROFILE\\\\AppData\\\\Local\\\\ms-playwright\"; Test-Path \"$env:LOCALAPPDATA\\\\ms-playwright\")",
+      "PowerShell(npm.cmd install -D playwright --no-save)",
+      "PowerShell(npx.cmd playwright install chromium --with-deps 2>&1)",
+      "PowerShell(node \"C:\\\\Users\\\\htony\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-htony-Documents-Projects-twitch-clip-viewer\\\\acb46bcb-08a4-494e-ad0a-58bd05ef9b3d\\\\scratchpad\\\\smoke.mjs\")",
+      "PowerShell(node __smoke.mjs)",
+      "PowerShell(npm.cmd uninstall playwright --no-save)",
+      "PowerShell(Get-NetTCPConnection -LocalPort 5173 -ErrorAction SilentlyContinue)",
+      "PowerShell(Invoke-WebRequest -Uri http://localhost:5173/ -UseBasicParsing -TimeoutSec 5)",
+      "PowerShell(npm.cmd run dev -- --host)",
+      "PowerShell(Invoke-WebRequest -Uri http://127.0.0.1:5173/ -UseBasicParsing -TimeoutSec 5)",
+      "PowerShell(\\(Get-Content -Raw -Encoding utf8 src\\\\index.css\\) -replace '--amber-dim', '--leaf-dim' -replace '--amber', '--leaf' -replace '--violet', '--moss' | Set-Content -Encoding utf8 src\\\\index.css)",
+      "PowerShell(node __smoke2.mjs)",
+      "PowerShell(npm.cmd run preview -- --port 4173)",
+      "PowerShell(Test-Path \"$env:ProgramFiles\\\\Git\\\\bin\\\\git.exe\"; Test-Path \"$env:ProgramFiles\\\\Git\\\\cmd\\\\git.exe\"; Test-Path \"$env:LOCALAPPDATA\\\\Programs\\\\Git\\\\bin\\\\git.exe\")",
+      "PowerShell(Invoke-WebRequest -Uri http://localhost:5173/ -UseBasicParsing)"
+    ]
+  }
+}

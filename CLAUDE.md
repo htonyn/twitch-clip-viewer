@@ -1,0 +1,43 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Overview
+
+Twitch Clip Portal is a static, no-backend Twitch clip viewer built with React + TypeScript + Vite. There is no server component — the Twitch Helix API is called directly from the browser, authenticated via Twitch's OAuth Implicit Grant flow (the only flow that doesn't require a backend to hold a client secret).
+
+## Development
+
+- `npm install` — install dependencies
+- `npm run dev` — start the Vite dev server
+- `npm run build` — type-check (`tsc -b`) and produce a production build
+- `npm run preview` — serve the production build locally
+- `npm run lint` — run oxlint
+
+There is no test suite.
+
+## Deployment (GitHub Pages)
+
+Target repo: `twitch-clip-viewer`, deployed as a GitHub Pages **project site** at `https://<username>.github.io/twitch-clip-viewer/` (not a `<username>.github.io` user/org site, which would serve from the root instead).
+
+- `vite.config.ts` sets `base: '/twitch-clip-viewer/'` **only for `vite build`** (checked via the `command` param passed to the config function) — the dev server still runs at `/`, so it doesn't disturb the Twitch app's existing `http://localhost:5173/` redirect URI registration. If the repo is ever renamed, update this to match.
+- No GitHub Actions workflow exists yet — deployment is still a manual step (`npm run build`, then publish `dist/`), and git itself hasn't been initialized in this project.
+- Whichever way `dist/` ends up published, add the production URL — `https://<username>.github.io/twitch-clip-viewer/` (exact match, including the trailing slash) — as an **additional** OAuth Redirect URL on the same Twitch app (alongside the existing localhost one; Twitch apps accept multiple registered redirect URLs). GitHub Pages serves HTTPS by default, which Twitch requires for any non-localhost redirect URI.
+
+## Architecture
+
+`App.tsx` renders `Header`, then either `TwitchAuth` (signed out) or `ChannelSearch` (signed in) in `main.stage`. The original queue-based UI (`InputPanel`/`PasteTab`/`BrowseTab`/`ReelSidebar`/`ClipCard`, `useClipQueue`) still exists under `src/` but is unused — channel browsing was rebuilt as a one-shot search instead of an accumulating queue.
+
+- **OAuth (Implicit Grant)** — `useTwitchAuth` (`src/hooks/useTwitchAuth.ts`) is the source of truth for auth state, backed by `sessionStorage` (`twitch_client_id`, `twitch_access_token`) so the session survives a refresh but clears when the tab/browser closes:
+  - `connect(clientId)` stashes a CSRF `state` nonce and a client ID, then redirects to `buildAuthorizeUrl()` (`src/lib/oauth.ts`) — `https://id.twitch.tv/oauth2/authorize` with `response_type=token`.
+  - On mount, it checks `location.hash` via `parseAuthResponse()` for the `access_token`/`state` (or `error`) Twitch appends on redirect back, validates `state` against the stashed nonce, then strips the hash with `history.replaceState`.
+  - Once a token is present it calls `fetchAuthenticatedUser()` (`src/lib/twitch.ts`) against `helix/users` (no query params → the token owner's own profile) both to confirm the token works and to get a display name + avatar; a failure here clears the stored token. `accessToken`, `clientId`, `displayName`, and `profileImageUrl` are all exposed for consumers.
+  - `Header` (`src/components/Header.tsx`) shows the signed-in state as an avatar button (top right) that toggles a dropdown with the display name and a "Disconnect" button (click-outside closes it via a `mousedown` listener). `TwitchAuth` (`src/components/TwitchAuth.tsx`) handles only the signed-out/connecting/error states: Client ID input + "Connect with Twitch".
+  - The Twitch app backing this needs **Client Type: Public** and an **OAuth Redirect URL** that exactly matches where the app is served (e.g. `http://localhost:5173/` in dev) — Twitch rejects mismatches by redirecting to the app's first registered redirect URI with an `error` param, which can look confusing (e.g. landing on an unrelated `http://localhost/`).
+- **Channel search** — `ChannelSearch` (`src/components/ChannelSearch.tsx`) is the container: it owns the search input plus `channelInfo`/`clips`/`playingIndex` state, and composes two presentational children:
+  - `ChannelDetails` (`src/components/ChannelDetails.tsx`) — avatar, display name (linked to `https://www.twitch.tv/<login>`), broadcaster type badge, bio, and member-since year, from `ChannelInfo` (`channelInfoFromHelix()` in `src/lib/twitch.ts`, mapped from `helix/users`). Follower count isn't shown: Helix's `channels/followers` endpoint requires the signed-in user to be a moderator (or the broadcaster) of the searched channel, so it 403s for arbitrary channels — not usable for a general channel-lookup feature like this one.
+  - `ClipsMenu` (`src/components/ClipsMenu.tsx`) — `Player` for the active clip plus the `ClipTile` grid below it; clicking a tile updates `playingIndex`. Each tile shows the clip's `creatorName` (Helix `creator_name` — the clip's creator, not necessarily the broadcaster) and a small "↗" overlay link to `https://clips.twitch.tv/<slug>` that calls `stopPropagation()` so opening the clip doesn't also select it as the active tile.
+  - `handleSearch()` calls `fetchUserByLogin()` then `fetchRecentClipsForBroadcaster()` (both `src/lib/twitch.ts`) as two separate steps (rather than the combined `fetchChannelClips()`, which still exists as a thin wrapper over both, used by the unused `BrowseTab`) so the channel details can render as soon as the user is resolved, independent of the clips fetch.
+  - `ClipLookup` (`src/components/ClipLookup.tsx`, shown once a channel is resolved) looks up one specific clip by ID or pasted URL — reuses `extractSlug()` and `fetchClipsByIds()` (both already used by the unused `PasteTab`). `handleClipLookup()` in `ChannelSearch` prepends the found clip to `clips` and selects it, or if it's already in the list (checked by `slug`), just re-selects the existing tile instead of duplicating it.
+  - **Getting genuinely "recent" clips is non-obvious**: Helix's `clips` endpoint, called with no `started_at`/`ended_at`, returns the broadcaster's all-time most-viewed clips (sorted by view count) — not recent ones. `fetchRecentClipsForBroadcaster()` works around this by querying with a date range, widening it through `RECENCY_WINDOWS_DAYS` (30 → 90 → 365 → 730 days) until a window returns at least one clip, then sorts that window's results by `created_at` descending and takes the top `count`. A channel with no clips in ~2 years falls back to an undated (all-time top) query so the search doesn't come back empty. This means "recent" is only as recent as the channel's actual clip activity — a low-activity channel can still surface year-old clips, honestly.
+- **`Player`** (`src/components/Player.tsx`) renders a Twitch embed iframe (`https://clips.twitch.tv/embed?clip=...&parent=...`) for the active clip. The `parent` param must match the hosting domain (`embedParent()` in `src/lib/twitch.ts` uses `location.hostname`) — Twitch embeds enforce this and fail silently if it's wrong.
