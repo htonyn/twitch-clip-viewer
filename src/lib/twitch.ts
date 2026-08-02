@@ -181,32 +181,68 @@ export async function fetchChannelClips(
 }
 
 // Twitch has no "search clips by title" endpoint, so title search is done client-side against
-// every clip we can pull for the broadcaster. This paginates through the full catalog (sorted by
-// view count server-side, but we don't care about order here) via the `after` cursor, handing
-// back each page as it arrives so the caller can build up a searchable index progressively
-// instead of waiting for everything. Capped at maxPages so a channel with tens of thousands of
-// clips can't turn into an unbounded request loop; stops early and quietly on any request failure
-// (e.g. rate limiting) rather than throwing, since this runs as a best-effort background task.
+// every clip we can pull for the broadcaster. Naively paginating the unscoped /clips endpoint via
+// `after` stops handing back a cursor well short of a large channel's actual clip count (observed:
+// ~1,100 clips returned for a channel with 20k+) — the endpoint sorts by view count when there's no
+// date range, and cursor depth into that sort appears to be capped server-side. Scoping each page
+// of pagination to a bounded date window keeps each window's own result count under that cap, and
+// walking windows backward in time covers the full history.
+// Stops walking further back once several consecutive windows come back empty (assumed to mean no
+// more clips exist further back), bounded by INDEX_MAX_WINDOWS as a hard safety cap regardless.
+// Stops early and quietly on any request failure (e.g. rate limiting) rather than throwing, since
+// this runs as a best-effort background task.
+const INDEX_WINDOW_DAYS = 30;
+const INDEX_MAX_EMPTY_WINDOW_STREAK = 6;
+const INDEX_MAX_WINDOWS = 200;
+
 export async function fetchAllClipsForBroadcaster(
   broadcasterId: string,
   clientId: string,
   token: string,
   onPage: (clips: Clip[]) => void,
-  maxPages = 50,
+  maxPagesPerWindow = 20,
 ): Promise<void> {
   const headers = { 'Client-Id': clientId, Authorization: 'Bearer ' + token };
-  let cursor: string | undefined;
-  let pages = 0;
+  let windowEnd = new Date();
+  let emptyStreak = 0;
 
-  do {
-    const params = new URLSearchParams({ broadcaster_id: broadcasterId, first: '100' });
-    if (cursor) params.set('after', cursor);
-    const res = await fetch(`https://api.twitch.tv/helix/clips?${params.toString()}`, { headers });
-    if (!res.ok) return;
-    const data: { data?: HelixClip[]; pagination?: { cursor?: string } } = await res.json();
-    const batch = data.data || [];
-    if (batch.length > 0) onPage(batch.map((c) => clipFromHelix(c, 'api')));
-    cursor = data.pagination?.cursor;
-    pages++;
-  } while (cursor && pages < maxPages);
+  for (let w = 0; w < INDEX_MAX_WINDOWS && emptyStreak < INDEX_MAX_EMPTY_WINDOW_STREAK; w++) {
+    const windowStart = new Date(windowEnd.getTime() - INDEX_WINDOW_DAYS * 86400000);
+    const startedAt = windowStart.toISOString();
+    const endedAt = windowEnd.toISOString();
+
+    let cursor: string | undefined;
+    let pages = 0;
+    let windowTotal = 0;
+
+    do {
+      const params = new URLSearchParams({
+        broadcaster_id: broadcasterId,
+        first: '100',
+        started_at: startedAt,
+        ended_at: endedAt,
+      });
+      if (cursor) params.set('after', cursor);
+      const res = await fetch(`https://api.twitch.tv/helix/clips?${params.toString()}`, { headers });
+      if (!res.ok) {
+        console.warn(
+          `[clip-index] stopped: window ${startedAt}..${endedAt} page ${pages + 1} returned ${res.status} ${res.statusText}`,
+          await res.text().catch(() => ''),
+        );
+        return;
+      }
+      const data: { data?: HelixClip[]; pagination?: { cursor?: string } } = await res.json();
+      const batch = data.data || [];
+      console.debug(
+        `[clip-index] window ${startedAt}..${endedAt} page ${pages + 1}: got ${batch.length}, cursor=${data.pagination?.cursor ?? '(none)'}`,
+      );
+      if (batch.length > 0) onPage(batch.map((c) => clipFromHelix(c, 'api')));
+      windowTotal += batch.length;
+      cursor = data.pagination?.cursor;
+      pages++;
+    } while (cursor && pages < maxPagesPerWindow);
+
+    emptyStreak = windowTotal === 0 ? emptyStreak + 1 : 0;
+    windowEnd = windowStart;
+  }
 }
