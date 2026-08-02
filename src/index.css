@@ -124,7 +124,7 @@ header{
   flex-direction:column;
   align-items:center;
   gap:16px;
-  padding:40px 20px;
+  padding:0 20px 40px;
 }
 .channel-search{
   display:flex;
@@ -366,20 +366,6 @@ main.stage{
 }
 .now-playing .title{font-weight:600; font-size:15px;}
 .now-playing .meta{font-family:'JetBrains Mono', monospace; font-size:12px; color:var(--text-dim);}
-.download-link{
-  flex-shrink:0;
-  font-family:'JetBrains Mono', monospace;
-  font-size:12px;
-  color:var(--text);
-  background:var(--panel-raised);
-  border:1px solid var(--line);
-  padding:7px 12px;
-  border-radius:6px;
-  text-decoration:none;
-  transition:border-color .15s, color .15s;
-}
-.download-link:hover{border-color:var(--leaf); color:var(--leaf);}
-
 /* ---- input tabs ---- */
 .input-card{
   margin-top:26px;

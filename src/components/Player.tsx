@@ -3,7 +3,6 @@ import type { Clip } from '../types';
 import { embedParent } from '../lib/twitch';
 import { formatDate, formatViews } from '../lib/format';
 import { joinParts } from '../lib/joinParts';
-import { deriveClipDownloadUrl } from '../lib/clipDownload';
 import { CopyDate } from './CopyDate';
 
 interface PlayerProps {
@@ -35,8 +34,6 @@ export function Player({ clip }: PlayerProps) {
   if (npViews) npParts.push(npViews);
   npParts.push(clip.slug);
 
-  const downloadUrl = deriveClipDownloadUrl(clip.thumb);
-
   return (
     <>
       <div className="player-shell">
@@ -47,11 +44,6 @@ export function Player({ clip }: PlayerProps) {
           <div className="title">{clip.title || clip.slug}</div>
           <div className="meta">{joinParts(npParts, ' · ')}</div>
         </div>
-        {downloadUrl && (
-          <a className="download-link" href={downloadUrl} download={`${clip.slug}.mp4`} target="_blank" rel="noopener">
-            ⬇ Download
-          </a>
-        )}
       </div>
     </>
   );

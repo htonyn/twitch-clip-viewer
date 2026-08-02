@@ -25,7 +25,8 @@
       "PowerShell(node __smoke2.mjs)",
       "PowerShell(npm.cmd run preview -- --port 4173)",
       "PowerShell(Test-Path \"$env:ProgramFiles\\\\Git\\\\bin\\\\git.exe\"; Test-Path \"$env:ProgramFiles\\\\Git\\\\cmd\\\\git.exe\"; Test-Path \"$env:LOCALAPPDATA\\\\Programs\\\\Git\\\\bin\\\\git.exe\")",
-      "PowerShell(Invoke-WebRequest -Uri http://localhost:5173/ -UseBasicParsing)"
+      "PowerShell(Invoke-WebRequest -Uri http://localhost:5173/ -UseBasicParsing)",
+      "PowerShell(node __inspect.mjs)"
     ]
   }
 }
