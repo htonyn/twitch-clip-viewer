@@ -158,3 +158,34 @@ export async function fetchChannelClips(
   const clips = await fetchRecentClipsForBroadcaster(user.id, count, clientId, token);
   return { clips, displayName: user.display_name };
 }
+
+// Twitch has no "search clips by title" endpoint, so title search is done client-side against
+// every clip we can pull for the broadcaster. This paginates through the full catalog (sorted by
+// view count server-side, but we don't care about order here) via the `after` cursor, handing
+// back each page as it arrives so the caller can build up a searchable index progressively
+// instead of waiting for everything. Capped at maxPages so a channel with tens of thousands of
+// clips can't turn into an unbounded request loop; stops early and quietly on any request failure
+// (e.g. rate limiting) rather than throwing, since this runs as a best-effort background task.
+export async function fetchAllClipsForBroadcaster(
+  broadcasterId: string,
+  clientId: string,
+  token: string,
+  onPage: (clips: Clip[]) => void,
+  maxPages = 50,
+): Promise<void> {
+  const headers = { 'Client-Id': clientId, Authorization: 'Bearer ' + token };
+  let cursor: string | undefined;
+  let pages = 0;
+
+  do {
+    const params = new URLSearchParams({ broadcaster_id: broadcasterId, first: '100' });
+    if (cursor) params.set('after', cursor);
+    const res = await fetch(`https://api.twitch.tv/helix/clips?${params.toString()}`, { headers });
+    if (!res.ok) return;
+    const data: { data?: HelixClip[]; pagination?: { cursor?: string } } = await res.json();
+    const batch = data.data || [];
+    if (batch.length > 0) onPage(batch.map((c) => clipFromHelix(c, 'api')));
+    cursor = data.pagination?.cursor;
+    pages++;
+  } while (cursor && pages < maxPages);
+}

@@ -147,10 +147,12 @@ header{
 }
 
 .clip-lookup{
-  display:flex;
-  gap:10px;
   width:100%;
   max-width:900px;
+}
+.clip-lookup-row{
+  display:flex;
+  gap:10px;
 }
 .clip-lookup input[type=text]{
   flex:1;
@@ -160,6 +162,12 @@ header{
 .clip-lookup button.primary{
   padding:0 18px;
   font-size:12.5px;
+}
+.clip-lookup-hint{
+  margin-top:6px;
+  font-family:'JetBrains Mono', monospace;
+  font-size:11px;
+  color:var(--text-dim);
 }
 
 .channel-details{
