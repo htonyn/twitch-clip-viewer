@@ -70,6 +70,7 @@ export function PasteTab({ active, clientId, oauthToken, playingIndex, addClips,
         duration: null,
         createdAt: null,
         viewCount: null,
+        categoryId: null,
         source: 'manual',
       };
     });

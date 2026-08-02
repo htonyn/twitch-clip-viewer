@@ -6,9 +6,22 @@ interface HeaderProps {
   displayName: string | null;
   profileImageUrl: string | null;
   disconnect: () => void;
+  channel: string;
+  onChannelChange: (value: string) => void;
+  onSearch: () => void;
+  searching: boolean;
 }
 
-export function Header({ status, displayName, profileImageUrl, disconnect }: HeaderProps) {
+export function Header({
+  status,
+  displayName,
+  profileImageUrl,
+  disconnect,
+  channel,
+  onChannelChange,
+  onSearch,
+  searching,
+}: HeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -30,6 +43,29 @@ export function Header({ status, displayName, profileImageUrl, disconnect }: Hea
           Twitch Clip <span>Portal</span>
         </h1>
       </div>
+
+      {status === 'signed-in' && (
+        <div className="header-search">
+          <button
+            className="header-search-icon"
+            disabled={searching}
+            onClick={onSearch}
+            aria-label="Search"
+            title="Search"
+          >
+            🔍
+          </button>
+          <input
+            type="text"
+            placeholder="Enter a channel name…"
+            value={channel}
+            onChange={(e) => onChannelChange(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') onSearch();
+            }}
+          />
+        </div>
+      )}
 
       {status === 'signed-in' ? (
         <div className="avatar-menu" ref={menuRef}>

@@ -7,6 +7,7 @@ export interface Clip {
   duration: number | null;
   createdAt: string | null;
   viewCount: number | null;
+  categoryId: string | null;
   source: 'manual' | 'api';
 }
 
@@ -19,6 +20,12 @@ export interface HelixClip {
   duration: number;
   created_at: string;
   view_count: number;
+  game_id: string;
+}
+
+export interface HelixGame {
+  id: string;
+  name: string;
 }
 
 export interface HelixUser {
@@ -41,4 +48,10 @@ export interface ChannelInfo {
   broadcasterType: string;
   totalViewCount: number;
   createdAt: string;
+}
+
+export interface Playlist {
+  id: string;
+  name: string;
+  clips: Clip[];
 }

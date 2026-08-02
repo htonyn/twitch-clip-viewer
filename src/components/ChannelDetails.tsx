@@ -2,9 +2,11 @@ import type { ChannelInfo } from '../types';
 
 interface ChannelDetailsProps {
   info: ChannelInfo;
+  indexingClips: boolean;
+  indexedCount: number;
 }
 
-export function ChannelDetails({ info }: ChannelDetailsProps) {
+export function ChannelDetails({ info, indexingClips, indexedCount }: ChannelDetailsProps) {
   const memberSince = new Date(info.createdAt).getFullYear();
 
   return (
@@ -22,11 +24,14 @@ export function ChannelDetails({ info }: ChannelDetailsProps) {
           {info.broadcasterType && <span className="channel-details-badge">{info.broadcasterType}</span>}
         </div>
         {info.description && <div className="channel-details-bio">{info.description}</div>}
-        {!isNaN(memberSince) && (
-          <div className="channel-details-stats">
-            <span>Channel since {memberSince}</span>
-          </div>
-        )}
+        <div className="channel-details-stats">
+          {!isNaN(memberSince) && <span>Channel since {memberSince}</span>}
+          {indexedCount > 0 && (
+            <span>
+              {indexedCount.toLocaleString()} clip{indexedCount === 1 ? '' : 's'} loaded{indexingClips ? '…' : ''}
+            </span>
+          )}
+        </div>
       </div>
     </div>
   );

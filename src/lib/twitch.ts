@@ -1,4 +1,4 @@
-import type { ChannelInfo, Clip, HelixClip, HelixUser } from '../types';
+import type { ChannelInfo, Clip, HelixClip, HelixGame, HelixUser } from '../types';
 
 export function extractSlug(url: string): string | null {
   url = url.trim();
@@ -41,8 +41,29 @@ function clipFromHelix(c: HelixClip, source: Clip['source']): Clip {
     duration: c.duration,
     createdAt: c.created_at,
     viewCount: c.view_count,
+    categoryId: c.game_id || null,
     source,
   };
+}
+
+// Helix's Clips endpoint only returns a game_id, not a category name — resolving names requires
+// this separate Get Games call. Ignores unresolvable/empty ids and swallows request failures
+// (returns whatever did resolve, or {} if the request itself failed) since this only feeds an
+// optional client-side filter, not anything that should be able to break the clip list.
+export async function fetchGameNames(ids: string[], clientId: string, token: string): Promise<Record<string, string>> {
+  const uniqueIds = Array.from(new Set(ids.filter(Boolean)));
+  if (uniqueIds.length === 0) return {};
+  const params = uniqueIds.map((id) => 'id=' + encodeURIComponent(id)).join('&');
+  const res = await fetch(`https://api.twitch.tv/helix/games?${params}`, {
+    headers: { 'Client-Id': clientId, Authorization: 'Bearer ' + token },
+  });
+  if (!res.ok) return {};
+  const data: { data?: HelixGame[] } = await res.json();
+  const map: Record<string, string> = {};
+  (data.data || []).forEach((g) => {
+    map[g.id] = g.name;
+  });
+  return map;
 }
 
 // Helix allows multiple id= params per request, up to 100.

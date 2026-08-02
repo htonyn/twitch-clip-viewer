@@ -26,7 +26,12 @@
       "PowerShell(npm.cmd run preview -- --port 4173)",
       "PowerShell(Test-Path \"$env:ProgramFiles\\\\Git\\\\bin\\\\git.exe\"; Test-Path \"$env:ProgramFiles\\\\Git\\\\cmd\\\\git.exe\"; Test-Path \"$env:LOCALAPPDATA\\\\Programs\\\\Git\\\\bin\\\\git.exe\")",
       "PowerShell(Invoke-WebRequest -Uri http://localhost:5173/ -UseBasicParsing)",
-      "PowerShell(node __inspect.mjs)"
+      "PowerShell(node __inspect.mjs)",
+      "PowerShell(Get-NetTCPConnection -LocalPort 5174 -ErrorAction SilentlyContinue)",
+      "PowerShell(node __smoke.mjs 2>&1)",
+      "PowerShell(Get-NetTCPConnection -LocalPort 5173,5174 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue })",
+      "PowerShell(Get-NetTCPConnection -LocalPort 5173,5174 -ErrorAction SilentlyContinue)",
+      "PowerShell(Get-NetTCPConnection -LocalPort 5173 -State Listen -ErrorAction SilentlyContinue)"
     ]
   }
 }

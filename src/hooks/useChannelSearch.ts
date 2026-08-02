@@ -5,32 +5,35 @@ import {
   extractSlug,
   fetchAllClipsForBroadcaster,
   fetchClipsByIds,
+  fetchGameNames,
   fetchRecentClipsForBroadcaster,
   fetchUserByLogin,
 } from '../lib/twitch';
-import { ChannelDetails } from './ChannelDetails';
-import { ClipLookup } from './ClipLookup';
-import { ClipsMenu } from './ClipsMenu';
 
-interface ChannelSearchProps {
-  clientId: string;
-  accessToken: string;
-}
-
-export function ChannelSearch({ clientId, accessToken }: ChannelSearchProps) {
+export function useChannelSearch(clientId: string, accessToken: string) {
   const [channel, setChannel] = useState('chocoTaco');
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [channelInfo, setChannelInfo] = useState<ChannelInfo | null>(null);
   const [clips, setClips] = useState<Clip[]>([]);
+  const [isSearchResult, setIsSearchResult] = useState(false);
   const [playingIndex, setPlayingIndex] = useState(-1);
   const [clipLookupLoading, setClipLookupLoading] = useState(false);
 
   // Full-catalog clip index, built progressively in the background so title search has more to
   // search over than just the ~20 "recent" clips shown in the grid. Keyed by slug to de-dupe.
+  // The map itself lives in a ref (search reads it directly, no re-render needed for that), but
+  // indexedCount is mirrored into state so the UI can show a live "N clips loaded" count.
   const allClipsMapRef = useRef(new Map<string, Clip>());
+  const [indexedCount, setIndexedCount] = useState(0);
   const [indexingClips, setIndexingClips] = useState(false);
   const searchGenRef = useRef(0);
+
+  // Category (game) names for whatever's currently in `clips` — Helix's clips only carry a
+  // game_id, so names need a separate resolve. knownCategoryIdsRef tracks which ids we've already
+  // asked about (successfully or not) so this doesn't refetch on every unrelated re-render.
+  const [categoryNames, setCategoryNames] = useState<Record<string, string>>({});
+  const knownCategoryIdsRef = useRef(new Set<string>());
 
   async function handleSearch() {
     const name = channel.trim();
@@ -40,6 +43,7 @@ export function ChannelSearch({ clientId, accessToken }: ChannelSearchProps) {
     }
     const myGen = ++searchGenRef.current;
     allClipsMapRef.current = new Map();
+    setIndexedCount(0);
     setSearching(true);
     setError(null);
     try {
@@ -49,6 +53,7 @@ export function ChannelSearch({ clientId, accessToken }: ChannelSearchProps) {
       const found = await fetchRecentClipsForBroadcaster(user.id, 20, clientId, accessToken);
       if (searchGenRef.current !== myGen) return;
       setClips(found);
+      setIsSearchResult(false);
       setPlayingIndex(found.length > 0 ? 0 : -1);
       if (found.length === 0) setError(`No clips found for ${user.display_name}.`);
 
@@ -57,6 +62,7 @@ export function ChannelSearch({ clientId, accessToken }: ChannelSearchProps) {
       fetchAllClipsForBroadcaster(user.id, clientId, accessToken, (page) => {
         if (searchGenRef.current !== myGen) return;
         page.forEach((c) => allClipsMapRef.current.set(c.slug, c));
+        setIndexedCount(allClipsMapRef.current.size);
       })
         .catch(() => {})
         .finally(() => {
@@ -74,10 +80,28 @@ export function ChannelSearch({ clientId, accessToken }: ChannelSearchProps) {
   }
 
   useEffect(() => {
+    // This hook is called unconditionally from App (so Header and the results area share one
+    // instance), but there's nothing to search until sign-in actually completes and a real
+    // access token exists — fire the default search once that happens, not on hook-mount.
+    if (!accessToken) return;
     handleSearch();
-    // Auto-search the default channel once on mount only.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [accessToken]);
+
+  useEffect(() => {
+    const missing = Array.from(
+      new Set(
+        clips
+          .map((c) => c.categoryId)
+          .filter((id): id is string => !!id && !knownCategoryIdsRef.current.has(id)),
+      ),
+    );
+    if (missing.length === 0 || !clientId || !accessToken) return;
+    missing.forEach((id) => knownCategoryIdsRef.current.add(id));
+    fetchGameNames(missing, clientId, accessToken)
+      .then((names) => setCategoryNames((prev) => ({ ...prev, ...names })))
+      .catch(() => {});
+  }, [clips, clientId, accessToken]);
 
   async function handleClipSearch(rawInput: string) {
     const query = rawInput.trim();
@@ -93,13 +117,10 @@ export function ChannelSearch({ clientId, accessToken }: ChannelSearchProps) {
         const map = await fetchClipsByIds([slug], clientId, accessToken);
         const found = map[slug];
         if (found) {
-          const existingIndex = clips.findIndex((c) => c.slug === found.slug);
-          if (existingIndex !== -1) {
-            setPlayingIndex(existingIndex);
-          } else {
-            setClips((prev) => [found, ...prev]);
-            setPlayingIndex(0);
-          }
+          // A clip search always replaces the results, even if the clip was already visible.
+          setClips([found]);
+          setIsSearchResult(true);
+          setPlayingIndex(0);
           return;
         }
         // Looked like a clip ID/URL but didn't resolve to a real clip — fall through to title search.
@@ -109,16 +130,9 @@ export function ChannelSearch({ clientId, accessToken }: ChannelSearchProps) {
       const matches = Array.from(allClipsMapRef.current.values()).filter((c) =>
         (c.title ?? '').toLowerCase().includes(q),
       );
-      if (matches.length === 0) {
-        setError(
-          indexingClips
-            ? `No clips found matching "${query}" so far — still indexing this channel's clips.`
-            : `No clips found matching "${query}".`,
-        );
-        return;
-      }
       setClips(matches);
-      setPlayingIndex(0);
+      setIsSearchResult(true);
+      setPlayingIndex(matches.length > 0 ? 0 : -1);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -126,31 +140,21 @@ export function ChannelSearch({ clientId, accessToken }: ChannelSearchProps) {
     }
   }
 
-  return (
-    <div className="channel-search-wrap">
-      <div className="channel-search">
-        <input
-          type="text"
-          placeholder="Enter a channel name…"
-          value={channel}
-          onChange={(e) => setChannel(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') handleSearch();
-          }}
-        />
-        <button className="primary" disabled={searching} onClick={handleSearch}>
-          {searching ? 'Searching…' : 'Search'}
-        </button>
-      </div>
-      {error && <div className="status-msg error">{error}</div>}
-
-      {channelInfo && (
-        <>
-          <ChannelDetails info={channelInfo} />
-          <ClipLookup onSearch={handleClipSearch} loading={clipLookupLoading} indexing={indexingClips} />
-        </>
-      )}
-      <ClipsMenu clips={clips} playingIndex={playingIndex} onPlay={setPlayingIndex} />
-    </div>
-  );
+  return {
+    channel,
+    setChannel,
+    searching,
+    error,
+    channelInfo,
+    clips,
+    isSearchResult,
+    categoryNames,
+    playingIndex,
+    setPlayingIndex,
+    clipLookupLoading,
+    indexingClips,
+    indexedCount,
+    handleSearch,
+    handleClipSearch,
+  };
 }

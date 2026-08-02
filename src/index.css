@@ -12,6 +12,11 @@
 }
 *{box-sizing:border-box;}
 html,body,#root{height:100%;}
+#root{
+  display:flex;
+  flex-direction:column;
+  min-height:100vh;
+}
 body{
   margin:0;
   background:
@@ -27,14 +32,46 @@ body{
 
 /* ---- header ---- */
 header{
-  padding:28px clamp(16px,4vw,48px) 20px;
+  padding:20px clamp(16px,4vw,48px);
   display:flex;
-  align-items:baseline;
+  align-items:center;
   justify-content:space-between;
   gap:16px;
   flex-wrap:wrap;
   border-bottom:1px solid var(--line);
 }
+.header-search{
+  position:relative;
+  flex:1;
+  min-width:180px;
+  max-width:420px;
+}
+.header-search input[type=text]{
+  width:100%;
+  font-size:13px;
+  padding:8px 12px 8px 48px;
+}
+.header-search-icon{
+  position:absolute;
+  left:10px;
+  top:50%;
+  transform:translateY(-50%);
+  display:flex;
+  align-items:center;
+  height:18px;
+  padding:0 9px 0 0;
+  margin:0;
+  border:0;
+  border-right:1px solid var(--line);
+  background:none;
+  font-size:13px;
+  line-height:1;
+  color:var(--text-dim);
+  cursor:pointer;
+  z-index:1;
+}
+.header-search-icon:hover{color:var(--leaf);}
+.header-search-icon:disabled{color:var(--text-dim); cursor:not-allowed; opacity:0.6;}
 .local-time-note{
   text-align:center;
   font-family:'JetBrains Mono', monospace;
@@ -118,37 +155,131 @@ header{
 }
 @keyframes spin{ to{ transform:rotate(360deg); } }
 
-/* ---- channel search ---- */
-.channel-search-wrap{
+/* ---- 3-column workspace ---- */
+.workspace{
+  display:grid;
+  grid-template-columns: 600px minmax(500px, 1fr) 320px;
+  gap:24px;
+  align-items:stretch;
+  height:100%;
+}
+@media (max-width: 1500px){
+  .workspace{ grid-template-columns: 1fr; height:auto; }
+}
+.col-search{
   display:flex;
   flex-direction:column;
-  align-items:center;
   gap:16px;
-  padding:0 20px 40px;
+  min-width:0;
+  min-height:0;
 }
-.channel-search{
+.col-player{
   display:flex;
+  flex-direction:column;
+  gap:16px;
+  min-width:0;
+}
+.col-extra{
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+  min-width:0;
+}
+
+/* ---- playlists ---- */
+.playlist-panel{
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
+.playlist-tabs{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}
+.playlist-tab{
+  background:var(--panel-raised);
+  border:1px solid var(--line);
+  color:var(--text-dim);
+  font-size:12.5px;
+  padding:7px 12px;
+  border-radius:20px;
+  cursor:pointer;
+  transition:border-color .15s, color .15s;
+  max-width:160px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.playlist-tab:hover{color:var(--text);}
+.playlist-tab.active{border-color:var(--leaf); color:var(--leaf);}
+.playlist-tab-new{color:var(--leaf); border-style:dashed;}
+.playlist-new-input{
+  width:120px;
+  font-size:12.5px;
+  padding:7px 12px;
+}
+.playlist-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
   gap:10px;
-  width:100%;
-  max-width:520px;
 }
-.channel-search input[type=text]{
-  flex:1;
-  font-size:16px;
-  padding:14px 16px;
+.playlist-name{
+  font-family:'Archivo Black', sans-serif;
+  font-size:15px;
+  cursor:pointer;
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
 }
-.channel-search button.primary{
-  padding:0 24px;
+.playlist-name:hover{color:var(--leaf);}
+.playlist-rename-input{
   font-size:14px;
+  padding:6px 10px;
+  flex:1;
 }
-.channel-search-wrap .status-msg{
-  width:100%;
-  max-width:520px;
+.playlist-delete{
+  flex-shrink:0;
+  background:none;
+  border:1px solid var(--line);
+  color:var(--text-dim);
+  font-family:'JetBrains Mono', monospace;
+  font-size:11px;
+  text-transform:uppercase;
+  letter-spacing:.5px;
+  padding:5px 10px;
+  border-radius:6px;
+  cursor:pointer;
+  transition:border-color .15s, color .15s;
 }
+.playlist-delete:hover{border-color:var(--danger); color:var(--danger);}
+.playlist-sort{display:flex; gap:6px;}
+.playlist-sort-btn{
+  background:var(--panel-raised);
+  border:1px solid var(--line);
+  color:var(--text-dim);
+  font-family:'JetBrains Mono', monospace;
+  font-size:11px;
+  text-transform:uppercase;
+  letter-spacing:.5px;
+  padding:6px 12px;
+  border-radius:6px;
+  cursor:pointer;
+  transition:border-color .15s, color .15s;
+}
+.playlist-sort-btn:hover{color:var(--text);}
+.playlist-sort-btn.active{border-color:var(--leaf); color:var(--leaf);}
+.playlist-empty{
+  color:var(--text-dim);
+  font-size:13px;
+  line-height:1.5;
+}
+.playlist-grid{grid-template-columns:1fr;}
 
 .clip-lookup{
   width:100%;
-  max-width:900px;
 }
 .clip-lookup-row{
   display:flex;
@@ -175,7 +306,6 @@ header{
   gap:16px;
   align-items:flex-start;
   width:100%;
-  max-width:900px;
   background:var(--panel);
   border:1px solid var(--line);
   border-radius:var(--radius);
@@ -236,31 +366,49 @@ header{
   color:var(--text-dim);
 }
 
-.clip-results{
-  width:100%;
-  max-width:900px;
+.clip-list{
+  display:flex;
+  flex-direction:column;
+  flex:1;
+  min-height:0;
 }
-.clip-results .player-shell{
-  background:var(--panel);
-  border:1px solid var(--line);
-  border-radius:var(--radius);
-  overflow:hidden;
-  aspect-ratio:16/9;
-  display:flex; align-items:center; justify-content:center;
-}
-.clip-results .player-shell iframe{width:100%; height:100%; border:0;}
-.clip-results-head{
-  margin-top:22px;
+.clip-list-head-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
   margin-bottom:12px;
+}
+.clip-list-head{
   font-family:'JetBrains Mono', monospace;
   font-size:12px;
   text-transform:uppercase;
   letter-spacing:1px;
   color:var(--text-dim);
+  white-space:nowrap;
+}
+.clip-list-count{color:var(--leaf);}
+.clip-list-filter{
+  background:var(--panel-raised);
+  border:1px solid var(--line);
+  color:var(--text);
+  font-family:'JetBrains Mono', monospace;
+  font-size:11px;
+  padding:5px 8px;
+  border-radius:6px;
+  cursor:pointer;
+  max-width:160px;
+}
+.clip-grid-scroll{
+  flex:1;
+  min-height:0;
+  overflow-y:auto;
+  padding-right:6px;
+  margin-right:-6px;
 }
 .clip-grid{
   display:grid;
-  grid-template-columns:repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns:repeat(2, 1fr);
   gap:14px;
 }
 .clip-tile{
@@ -332,6 +480,8 @@ header{
 
 main.stage{
   padding: clamp(16px,3vw,40px);
+  flex:1;
+  min-height:0;
 }
 .player-shell{
   position:relative;

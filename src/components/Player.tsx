@@ -16,8 +16,7 @@ export function Player({ clip }: PlayerProps) {
         <div className="empty-stage">
           <div className="glyph">▷</div>
           <p>
-            Nothing loaded yet. Paste a clip URL below, or pull clips from a channel, then pick one from the reel to
-            play it here.
+            Nothing loaded yet. Search a channel or look up a clip on the left, then pick one to play it here.
           </p>
         </div>
       </div>
