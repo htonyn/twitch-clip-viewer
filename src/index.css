@@ -35,6 +35,14 @@ header{
   flex-wrap:wrap;
   border-bottom:1px solid var(--line);
 }
+.local-time-note{
+  text-align:center;
+  font-family:'JetBrains Mono', monospace;
+  font-size:11px;
+  color:var(--text-dim);
+  padding:8px 20px;
+  border-bottom:1px solid var(--line);
+}
 .brand{display:flex; align-items:baseline; gap:14px;}
 .brand h1{
   font-family:'Archivo Black', sans-serif;
@@ -116,9 +124,6 @@ header{
   flex-direction:column;
   align-items:center;
   gap:16px;
-  padding:min(18vh, 160px) 20px 40px;
-}
-.channel-search-wrap.has-results{
   padding:40px 20px;
 }
 .channel-search{
@@ -273,9 +278,13 @@ header{
   background:linear-gradient(135deg, var(--leaf), var(--moss));
   font-family:'Archivo Black'; font-size:12px; color:rgba(255,255,255,0.75);
 }
-.clip-tile-open{
+.clip-tile-actions{
   position:absolute;
   top:6px; right:6px;
+  display:flex;
+  gap:6px;
+}
+.clip-tile-action{
   width:22px; height:22px;
   border-radius:50%;
   background:rgba(0,0,0,0.55);
@@ -286,8 +295,15 @@ header{
   line-height:1;
   transition:background-color .15s, transform .1s;
 }
-.clip-tile-open:hover{background:var(--leaf); transform:scale(1.08);}
+.clip-tile-action:hover{background:var(--leaf); transform:scale(1.08);}
 .clip-tile .info{padding:10px;}
+
+.copy-date{
+  cursor:pointer;
+  border-bottom:1px dotted var(--text-dim);
+  transition:color .15s, border-color .15s;
+}
+.copy-date:hover{color:var(--leaf); border-color:var(--leaf);}
 .clip-tile .title{
   font-size:13px; font-weight:600; line-height:1.3; margin-bottom:4px;
   display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
@@ -350,6 +366,19 @@ main.stage{
 }
 .now-playing .title{font-weight:600; font-size:15px;}
 .now-playing .meta{font-family:'JetBrains Mono', monospace; font-size:12px; color:var(--text-dim);}
+.download-link{
+  flex-shrink:0;
+  font-family:'JetBrains Mono', monospace;
+  font-size:12px;
+  color:var(--text);
+  background:var(--panel-raised);
+  border:1px solid var(--line);
+  padding:7px 12px;
+  border-radius:6px;
+  text-decoration:none;
+  transition:border-color .15s, color .15s;
+}
+.download-link:hover{border-color:var(--leaf); color:var(--leaf);}
 
 /* ---- input tabs ---- */
 .input-card{

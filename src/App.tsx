@@ -10,6 +10,7 @@ export default function App() {
   return (
     <>
       <Header status={status} displayName={displayName} profileImageUrl={profileImageUrl} disconnect={disconnect} />
+      <div className="local-time-note">All dates and times shown are your local time.</div>
       <main className="stage">
         {status === 'connecting' ? (
           <Loading />

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { ChannelInfo, Clip } from '../types';
 import {
   channelInfoFromHelix,
@@ -17,7 +17,7 @@ interface ChannelSearchProps {
 }
 
 export function ChannelSearch({ clientId, accessToken }: ChannelSearchProps) {
-  const [channel, setChannel] = useState('');
+  const [channel, setChannel] = useState('chocoTaco');
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [channelInfo, setChannelInfo] = useState<ChannelInfo | null>(null);
@@ -50,6 +50,12 @@ export function ChannelSearch({ clientId, accessToken }: ChannelSearchProps) {
     }
   }
 
+  useEffect(() => {
+    handleSearch();
+    // Auto-search the default channel once on mount only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   async function handleClipLookup(rawInput: string) {
     const slug = extractSlug(rawInput) ?? rawInput.trim();
     if (!slug) {
@@ -80,7 +86,7 @@ export function ChannelSearch({ clientId, accessToken }: ChannelSearchProps) {
   }
 
   return (
-    <div className={'channel-search-wrap' + (channelInfo ? ' has-results' : '')}>
+    <div className="channel-search-wrap">
       <div className="channel-search">
         <input
           type="text"
